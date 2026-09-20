@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Deepin Sticky Notes
+Name[zh_CN]=Deepin 极简便签
+Comment=轻量、低打扰的桌面便签
+Exec=deepin-sticky-notes
+Icon=accessories-text-editor
+Terminal=false
+Type=Application
+Categories=Utility;Office;
+StartupWMClass=deepin-sticky-notes
