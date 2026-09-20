@@ -1,8 +1,8 @@
 //! Global application state and orchestration.
 //!
-//! `App` owns the list of open note windows, the tray icon, the global hotkey,
-//! the theme watcher and the debounced save timer. It is the single place where
-//! the Slint UI and the persisted [`crate::model`] meet.
+//! `App` owns the list of open note windows, the tray icon, the global hotkey
+//! and the debounced save timer. It is the single place where the Slint UI and
+//! the persisted [`crate::model`] meet.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use anyhow::Result;
 use slint::{ComponentHandle, Model, ModelRc, Timer, TimerMode, VecModel, Weak};
 
 use crate::model::{AppState, Block, BlockType, Note};
-use crate::{hotkey, storage, theme, tray};
+use crate::{hotkey, storage, tray};
 
 slint::include_modules!();
 
@@ -37,14 +37,9 @@ pub struct App {
     windows: HashMap<String, NoteHandle>,
     tray: Option<tray::Tray>,
     hotkey: Option<(global_hotkey::GlobalHotKeyManager, u32)>,
-    theme_rx: Option<std::sync::mpsc::Receiver<bool>>,
     dark_mode: bool,
-    /// Manual theme override: `None` follows the system, `Some(true/false)`
-    /// forces dark/light until the app is restarted.
-    theme_override: Option<bool>,
     poll_timer: Timer,
     save_timer: Timer,
-    theme_poll_counter: u32,
     /// Timestamp of a pending tray left-click, deferred to disambiguate it
     /// from a double-click.
     tray_click_pending: Option<Instant>,
@@ -58,18 +53,14 @@ impl App {
             windows: HashMap::new(),
             tray: None,
             hotkey: None,
-            theme_rx: None,
-            dark_mode: theme::is_dark(),
-            theme_override: None,
+            dark_mode: false,
             poll_timer: Timer::default(),
             save_timer: Timer::default(),
-            theme_poll_counter: 0,
             tray_click_pending: None,
             screen_size: screen_size(),
         };
         app.tray = tray::Tray::create().ok();
         app.hotkey = hotkey::register_new_note().ok().flatten();
-        app.theme_rx = theme::monitor_dark_mode();
         Ok(app)
     }
 
@@ -290,35 +281,12 @@ impl App {
         }
     }
 
-    /// The system color scheme changed; honor it only when the user has not
-    /// manually overridden the theme.
-    fn system_dark_changed(&mut self, dark: bool) {
-        if self.theme_override.is_none() {
-            self.apply_dark_mode(dark);
-        }
-    }
-
-    /// Manually flip light/dark and stop following the system scheme.
+    /// Manually flip light/dark.
     fn toggle_theme(&mut self) {
-        let next = !self.dark_mode;
-        self.theme_override = Some(next);
-        self.apply_dark_mode(next);
+        self.apply_dark_mode(!self.dark_mode);
     }
 
     fn poll(&mut self, app: Rc<RefCell<App>>) {
-        // Theme changes (instant via monitor, plus a periodic fallback check).
-        let dark_changes: Vec<bool> = match &self.theme_rx {
-            Some(rx) => rx.try_iter().collect(),
-            None => Vec::new(),
-        };
-        for dark in dark_changes {
-            self.system_dark_changed(dark);
-        }
-        self.theme_poll_counter += 1;
-        if self.theme_poll_counter % 8 == 0 {
-            self.system_dark_changed(theme::is_dark());
-        }
-
         // Tray actions.
         if let Some(action) = self.tray.as_ref().and_then(|t| t.next_action()) {
             match action {

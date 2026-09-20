@@ -2,7 +2,6 @@ mod app;
 mod hotkey;
 mod model;
 mod storage;
-mod theme;
 mod tray;
 
 use std::cell::RefCell;

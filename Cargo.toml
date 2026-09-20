@@ -1,6 +1,6 @@
 [package]
 name = "deepin-sticky-notes"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 description = "Deepin 极简便签 — a lightweight, low-distraction sticky notes app"
 license = "MIT"
@@ -31,6 +31,5 @@ Deepin 极简便签：轻量、低打扰的桌面便签应用。支持多便签�
 assets = [
     ["target/release/deepin-sticky-notes", "usr/bin/", "755"],
     ["resources/com.deepin.stickynotes.desktop", "usr/share/applications/", "644"],
-    ["resources/com.deepin.stickynotes.autostart.desktop", "etc/xdg/autostart/", "644"],
     ["resources/icons/512x512.png", "usr/share/icons/hicolor/512x512/apps/deepin-sticky-notes.png", "644"],
 ]

@@ -2,7 +2,7 @@
 
 > 轻量、低打扰的 Deepin 桌面便签应用 · Rust + Slint
 
-一款面向 **Deepin Linux V23** 的桌面便签：多便签窗口、文本与待办混合编辑、Markdown 渲染、置顶、系统托盘与全局热键，配色完全跟随系统主题（也可手动切换）。
+一款面向 **Deepin Linux V23** 的桌面便签：多便签窗口、文本与待办混合编辑、Markdown 渲染、置顶、系统托盘、全局热键与浅色/深色主题切换。
 
 ---
 
@@ -29,7 +29,7 @@
 - **Markdown 渲染**：加粗、斜体、删除线、行内代码、链接、无序/有序列表（见[已知限制](#已知限制)）。
 - **系统托盘**：左键单击切换显示/隐藏、双击新建、右键菜单（新建/显示全部/隐藏全部/退出）。
 - **全局热键**：`Ctrl+Alt+N` 新建便签；Wayland 下失效时窗口内同样快捷键兜底。
-- **主题**：默认跟随系统亮/暗（`gsettings` 监听，200ms 平滑过渡）；便签右上角 ☀/☾ 手动切换。
+- **主题**：便签右上角 ☀/☾ 按钮手动切换浅色/深色（200ms 平滑过渡）。
 - **可靠持久化**：500ms 防抖保存，退出强制落盘；重启恢复位置、大小、置顶与内容。
 - **删除便签**：右上角垃圾桶按钮永久删除（区别于 ✕ 关闭即隐藏）。
 
@@ -61,7 +61,6 @@ deepin-sticky-notes/
 │   ├── model.rs               # 数据模型：BlockType / Block / Note / AppState
 │   ├── storage.rs             # JSON 读写（XDG 路径）
 │   ├── tray.rs                # 托盘图标、菜单与事件
-│   ├── theme.rs               # 系统主题监听（gsettings get/monitor）
 │   ├── hotkey.rs              # 全局热键注册
 │   └── ui/
 │       ├── app.slint          # 编译入口，导入并 re-export
@@ -86,7 +85,7 @@ deepin-sticky-notes/
 
 - Rust 工具链（`rustc` + `cargo`）
 - Linux 桌面环境（X11 或 Wayland），OpenGL 支持
-- Deepin 下需 `gsettings`（主题跟随）与 DBus（托盘）
+- Deepin 下需 DBus（托盘）
 
 ### 构建与运行
 
@@ -172,8 +171,8 @@ sudo dpkg -i deepin-sticky-notes_0.1.0_amd64.deb
 - `App`（`src/app.rs`）持有 `HashMap<String, NoteHandle>`，每个便签窗口对应一个 `Rc<VecModel<BlockItem>>` 块模型。
 - 内容编辑通过 `text <=> content` 双向绑定直接写入模型；结构性操作（插入/删除/转换/排序）由 Rust 回调修改模型；每次编辑触发 `render_markdown` 重新解析 Markdown 存入 `rendered` 字段。
 - 持久化时由 Rust 将运行时模型快照为 `AppState`（`Note`/`Block`）序列化到 JSON。
-- 托盘 / 热键 / 主题变更通过一个 120ms 轮询计时器统一分发（`gsettings monitor` 后台线程 + 轮询兜底）。
-- 主题以 `export global Theme` 暴露色板，`App` 在系统切换或手动切换时对所有窗口 `set_dark_mode`。
+- 托盘 / 热键变更通过一个 120ms 轮询计时器统一分发。
+- 主题以 `export global Theme` 暴露色板，`App` 在手动切换时对所有窗口 `set_dark_mode`。
 
 数据模型（`src/model.rs`）与 `docs/03-开发实现路径.md` 一致：
 
