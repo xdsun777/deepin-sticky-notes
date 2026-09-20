@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Deepin Sticky Notes
+Name[zh_CN]=Deepin 极简便签
+Comment=Start Deepin Sticky Notes on login
+Comment[zh_CN]=登录时启动 Deepin 极简便签
+Exec=deepin-sticky-notes
+Type=Application
+Terminal=false
+Icon=deepin-sticky-notes
+X-GNOME-Autostart-enabled=true

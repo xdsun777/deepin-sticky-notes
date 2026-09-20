@@ -1,0 +1,474 @@
+// Copyright © Deepin Sticky Notes contributors.
+// SPDX-License-Identifier: MIT
+
+import { Theme } from "theme.slint";
+
+// One content block as seen by the UI. `is-todo` selects whether a checkbox
+// and drag handle are rendered next to the text line. `content` holds the raw
+// Markdown source; `rendered` holds the parsed/styled text for display.
+export struct BlockItem {
+    id: string,
+    is-todo: bool,
+    content: string,
+    checked: bool,
+    rendered: styled-text,
+}
+
+// 16x16 checkbox with a fading check mark. The component fills the height of
+// the row and centers its 16px box vertically.
+component CheckBox16 {
+    in property <bool> checked;
+    callback toggled;
+
+    width: 16px;
+
+    ta := TouchArea {
+        clicked => { toggled(); }
+
+        box := Rectangle {
+            width: 16px;
+            height: 16px;
+            y: (parent.height - 16px) / 2;
+            border-radius: 4px;
+            border-width: 1px;
+            border-color: ta.has-hover || checked ? Theme.checkbox-color() : Theme.checkbox-border();
+            background: checked ? Theme.checkbox-color() : transparent;
+            animate background { duration: 100ms; easing: ease; }
+            animate border-color { duration: 100ms; easing: ease; }
+
+            Text {
+                text: "✓";
+                color: #ffffff;
+                font-size: 11px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                opacity: checked ? 1.0 : 0.0;
+                animate opacity { duration: 100ms; easing: ease; }
+            }
+        }
+    }
+}
+
+// A single editable block. Text blocks are multi-line (free paragraph editing);
+// todo blocks are single-line with a checkbox. The selection gutter is always
+// present. The text input is the same element in both cases, so keyboard focus
+// survives a text<->todo conversion.
+component BlockRow {
+    in property <int> index;
+    in property <bool> is-todo;
+    in-out property <string> content;
+    in property <styled-text> rendered;
+    in property <bool> checked;
+    in property <bool> selected;
+    in property <int> focus-index;
+    in property <int> focus-seq;
+
+    callback edited(int, string);
+    callback accepted(int);
+    callback checked-toggled(bool);
+    callback delete-requested(int);
+    callback downgrade-requested(int);
+    callback move-requested(int, length);
+    callback insert-todo-requested(int);
+    callback select-requested(int, bool);
+
+    min-height: 32px;
+
+    // Re-focus this line when the host asks for it (e.g. after inserting a
+    // block or converting `- [ ]` into a todo).
+    changed focus-seq => {
+        if focus-index == index {
+            ti.focus();
+        }
+    }
+
+    Rectangle {
+        background: selected ? Theme.selection-background() : transparent;
+        border-radius: 4px;
+        animate background { duration: 100ms; easing: ease; }
+
+        ContextMenuArea {
+            Menu {
+                MenuItem { title: "复制"; activated => { ti.copy(); } }
+                MenuItem { title: "粘贴"; activated => { ti.paste(); } }
+                MenuItem { title: "全选"; activated => { ti.select-all(); } }
+                MenuSeparator {}
+                MenuItem { title: "插入待办项"; activated => { insert-todo-requested(index); } }
+                MenuItem { title: "删除本行"; activated => { delete-requested(index); } }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                // Selection gutter (click to select, Shift+click to extend).
+                gutter := TouchArea {
+                    width: 8px;
+                    vertical-stretch: 1;
+                    pointer-event(ev) => {
+                        if ev.kind == PointerEventKind.down && ev.button == PointerEventButton.left {
+                            select-requested(index, ev.modifiers.shift);
+                        }
+                    }
+
+                    Rectangle {
+                        width: 4px;
+                        height: 4px;
+                        border-radius: 2px;
+                        x: 2px;
+                        y: (parent.height - 4px) / 2;
+                        background: selected ? Theme.checkbox-color() : (gutter.has-hover ? Theme.control-normal() : transparent);
+                    }
+                }
+
+                // Drag handle (todos only).
+                if is-todo : grip := TouchArea {
+                    width: 12px;
+                    vertical-stretch: 1;
+                    mouse-cursor: MouseCursor.grab;
+                    pointer-event(ev) => {
+                        if ev.button == PointerEventButton.left && ev.kind == PointerEventKind.up {
+                            move-requested(index, self.mouse-y - self.pressed-y);
+                        }
+                    }
+
+                    Rectangle { x: 2px; y: (parent.height - 7px) / 2; width: 8px; height: 1px; background: grip.has-hover ? Theme.control-hover() : Theme.control-normal(); }
+                    Rectangle { x: 2px; y: (parent.height - 7px) / 2 + 2px; width: 8px; height: 1px; background: grip.has-hover ? Theme.control-hover() : Theme.control-normal(); }
+                    Rectangle { x: 2px; y: (parent.height - 7px) / 2 + 4px; width: 8px; height: 1px; background: grip.has-hover ? Theme.control-hover() : Theme.control-normal(); }
+                }
+
+                // Checkbox (todos only).
+                if is-todo : CheckBox16 {
+                    checked: checked;
+                    vertical-stretch: 1;
+                    toggled => { checked-toggled(!checked); }
+                }
+
+                // The text area: renders Markdown when not being edited, and
+                // shows the raw Markdown source while focused. Its height grows
+                // with the (multi-line) text content.
+                Rectangle {
+                    height: max(ti.preferred-height, 32px);
+
+                    // Rendered Markdown (visible when the line is not focused).
+                    StyledText {
+                        text: rendered;
+                        width: 100%;
+                        height: 100%;
+                        default-color: is-todo && checked ? Theme.text-done() : Theme.text-color();
+                        default-font-size: 14px;
+                        link-color: Theme.checkbox-color();
+                        vertical-alignment: center;
+                        opacity: is-todo && checked ? 0.6 : 1.0;
+                        visible: !ti.has-focus;
+                    }
+
+                    // Raw Markdown editor.
+                    ti := TextInput {
+                        text <=> content;
+                        single-line: is-todo;
+                        wrap: word-wrap;
+                        font-size: 14px;
+                        line-height-factor: 1.5;
+                        vertical-alignment: center;
+                        color: ti.has-focus ? (is-todo && checked ? Theme.text-done() : Theme.text-color()) : transparent;
+                        opacity: is-todo && checked ? 0.6 : 1.0;
+                        animate color { duration: 100ms; easing: ease; }
+                        animate opacity { duration: 100ms; easing: ease; }
+                        edited => { edited(index, self.text); }
+                        accepted => { accepted(index); }
+                        key-pressed(event) => {
+                            if event.text == "\u{8}" && self.text == "" {
+                                if is-todo {
+                                    downgrade-requested(index);
+                                } else {
+                                    delete-requested(index);
+                                }
+                                return accept;
+                            }
+                            return reject;
+                        }
+                    }
+
+                    // Strike-through line for completed todos.
+                    if is-todo && checked : Rectangle {
+                        height: 1px;
+                        width: 100%;
+                        y: (parent.height - 1px) / 2;
+                        background: Theme.text-done();
+                    }
+                }
+            }
+        }
+    }
+}
+
+// A frameless sticky-note window. `shadow-margin` leaves transparent room
+// around the note body so its drop shadow is not clipped by the window bounds.
+export component NoteWindow inherits Window {
+    in property <string> note-id;
+    in property <string> note-title;
+    in property <[BlockItem]> blocks;
+    in property <bool> pinned;
+    in-out property <int> focus-index: -1;
+    in-out property <int> focus-seq: 0;
+    in-out property <float> fade-opacity: 1.0;
+    in-out property <int> sel-start: -1;
+    in-out property <int> sel-end: -1;
+
+    callback block-edited(int, string);
+    callback block-accepted(int);
+    callback block-checked(int, bool);
+    callback block-delete(int);
+    callback block-downgrade(int);
+    callback block-move(int, length);
+    callback insert-todo(int);
+    callback pin-requested();
+    callback close-requested();
+    callback new-note-requested();
+    callback delete-note-requested();
+    callback theme-toggle-requested();
+
+    property <length> shadow-margin: 20px;
+
+    no-frame: true;
+    background: transparent;
+    always-on-top: pinned;
+    // Extend the native resize border past the transparent shadow margin so the
+    // visible note edge is resizable, not just the invisible window edge.
+    resize-border-width: 24px;
+    preferred-width: 280px + 2 * shadow-margin;
+    preferred-height: 360px + 2 * shadow-margin;
+    min-width: 200px + 2 * shadow-margin;
+    min-height: 200px + 2 * shadow-margin;
+    title: note-title;
+    default-font-family: "Noto Sans CJK SC, WenQuanYi Micro Hei, Ubuntu, sans-serif";
+    default-font-size: 14px;
+
+    // Dragging a frameless window: only blank areas reach this layer because
+    // the interactive children (inputs, flickable, buttons) sit above it.
+    WindowMoveArea {}
+
+    // In-app fallback for the global hotkey: when the Wayland global-hotkey
+    // registration fails, Ctrl+Alt+N still works while a note is focused.
+    FocusScope {
+        capture-key-pressed(event) => {
+            if event.modifiers.control && event.modifiers.alt && (event.text == "n" || event.text == "N") {
+                new-note-requested();
+                return accept;
+            }
+            return reject;
+        }
+
+        // The note body, inset by the shadow margin.
+        Rectangle {
+        x: shadow-margin;
+        y: shadow-margin;
+        width: parent.width - 2 * shadow-margin;
+        height: parent.height - 2 * shadow-margin;
+        border-radius: 8px;
+        background: Theme.note-background();
+        animate background { duration: 200ms; easing: ease; }
+        opacity: fade-opacity;
+        animate opacity { duration: 150ms; easing: ease; }
+
+        drop-shadow-blur: pinned ? 24px : 16px;
+        drop-shadow-offset-y: pinned ? 8px : 4px;
+        drop-shadow-color: Theme.shadow-color();
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 8px;
+
+            // Header: title + the two control buttons (pin / close).
+            HorizontalLayout {
+                height: 20px;
+                spacing: 6px;
+
+                Text {
+                    text: note-title;
+                    font-size: 12px;
+                    color: Theme.text-secondary();
+                    vertical-alignment: center;
+                }
+
+                Rectangle { horizontal-stretch: 1; }
+
+                // Theme toggle (sun in light mode, moon in dark mode).
+                theme-area := TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { theme-toggle-requested(); }
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        x: (parent.width - 12px) / 2;
+                        y: (parent.height - 12px) / 2;
+                        border-radius: 6px;
+                        background: theme-area.has-hover ? Theme.control-hover() : Theme.control-normal();
+                        animate background { duration: 200ms; easing: ease; }
+                        Text {
+                            text: Theme.dark-mode ? "☾" : "☀";
+                            font-size: 9px;
+                            color: Theme.dark-mode ? Theme.checkbox-color() : Theme.text-secondary();
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Pin (toggle always-on-top).
+                pin-area := TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { pin-requested(); }
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        x: (parent.width - 12px) / 2;
+                        y: (parent.height - 12px) / 2;
+                        border-radius: 6px;
+                        background: pin-area.has-hover ? Theme.control-hover() : Theme.control-normal();
+                        animate background { duration: 200ms; easing: ease; }
+                        // Pin glyph: small head + needle.
+                        Rectangle {
+                            width: 4px;
+                            height: 4px;
+                            border-radius: 2px;
+                            x: 4px;
+                            y: 2px;
+                            background: pinned ? Theme.checkbox-color() : Theme.text-secondary();
+                            animate background { duration: 200ms; easing: ease; }
+                        }
+                        Rectangle {
+                            width: 2px;
+                            height: 5px;
+                            x: 5px;
+                            y: 5px;
+                            background: pinned ? Theme.checkbox-color() : Theme.text-secondary();
+                            animate background { duration: 200ms; easing: ease; }
+                        }
+                    }
+                }
+
+                // Delete (permanently remove this note).
+                delete-area := TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { delete-note-requested(); }
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        x: (parent.width - 12px) / 2;
+                        y: (parent.height - 12px) / 2;
+                        border-radius: 6px;
+                        background: delete-area.has-hover ? #ff4d4f59 : Theme.control-normal();
+                        animate background { duration: 200ms; easing: ease; }
+                        // Trash-can glyph drawn from primitives.
+                        Rectangle {
+                            width: 7px;
+                            height: 5px;
+                            x: 2.5px;
+                            y: 5px;
+                            border-radius: 1px;
+                            border-width: 1px;
+                            border-color: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                        }
+                        Rectangle {
+                            width: 9px;
+                            height: 1px;
+                            x: 1.5px;
+                            y: 3.5px;
+                            background: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                        }
+                        Rectangle {
+                            width: 3px;
+                            height: 1px;
+                            x: 4.5px;
+                            y: 2px;
+                            background: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                        }
+                    }
+                }
+
+                // Close (hide the window).
+                close-area := TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { close-requested(); }
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        x: (parent.width - 12px) / 2;
+                        y: (parent.height - 12px) / 2;
+                        border-radius: 6px;
+                        background: close-area.has-hover ? Theme.control-hover() : Theme.control-normal();
+                        animate background { duration: 200ms; easing: ease; }
+                        Text {
+                            text: "✕";
+                            font-size: 9px;
+                            color: Theme.text-secondary();
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Theme.divider();
+            }
+
+            // The editable block list.
+            Flickable {
+                vertical-stretch: 1;
+                interactive: true;
+                content-height: block-list.preferred-height;
+
+                block-list := VerticalLayout {
+                    width: 100%;
+                    spacing: 8px;
+                    for block[i] in root.blocks : BlockRow {
+                        index: i;
+                        is-todo: block.is-todo;
+                        content <=> block.content;
+                        rendered: block.rendered;
+                        checked: block.checked;
+                        selected: root.sel-start >= 0 && i >= min(root.sel-start, root.sel-end) && i <= max(root.sel-start, root.sel-end);
+                        focus-index: root.focus-index;
+                        focus-seq: root.focus-seq;
+
+                        edited(i, text) => { root.block-edited(i, text); }
+                        accepted(i) => { root.block-accepted(i); }
+                        checked-toggled(value) => { root.block-checked(i, value); }
+                        delete-requested(i) => { root.block-delete(i); }
+                        downgrade-requested(i) => { root.block-downgrade(i); }
+                        move-requested(i, delta) => { root.block-move(i, delta); }
+                        insert-todo-requested(i) => { root.insert-todo(i); }
+                        select-requested(i, shift) => {
+                            if shift && root.sel-start >= 0 {
+                                root.sel-end = i;
+                            } else {
+                                root.sel-start = i;
+                                root.sel-end = i;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+            // Resize grip hint in the bottom-right corner.
+            Path {
+                width: 10px;
+                height: 10px;
+                x: parent.width - 14px;
+                y: parent.height - 14px;
+                commands: "M 1 8 L 8 1 M 3 8 L 8 3";
+                stroke: Theme.control-normal();
+                stroke-width: 1px;
+                fill: transparent;
+            }
+        }
+    }
+}

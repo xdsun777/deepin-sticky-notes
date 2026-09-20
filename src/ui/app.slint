@@ -1,95 +1,11 @@
-import { Button, TextEdit } from "std-widgets.slint";
+// Copyright © Deepin Sticky Notes contributors.
+// SPDX-License-Identifier: MIT
 
-export component NoteWindow inherits Window {
-    in property <string> note-id;
-    in property <string> note-title;
-    in property <string> initial-body;
-    in property <string> note-color: "yellow";
-    in property <bool> pinned: false;
-    in property <bool> dark-mode: false;
-    property <bool> palette-visible: false;
-    callback body-edited(string);
-    callback close-requested();
-    callback pin-requested();
-    callback color-requested(string);
-    callback insert-todo-requested();
+// Compilation entry point. `build.rs` compiles this file, which pulls in the
+// theme and note-window modules and re-exports their public types so that Rust
+// can construct windows and the block model.
 
-    width: 280px;
-    height: 360px;
-    no-frame: true;
-    title: note-title;
-    background: note-color == "white" ? (dark-mode ? #353535 : #ffffff) : note-color == "blue" ? (dark-mode ? #2e3a4a : #e8f0fe) : (dark-mode ? #4a4230 : #fff9d0);
+import { Theme } from "theme.slint";
+import { NoteWindow, BlockItem } from "note_window.slint";
 
-    Rectangle {
-        background: root.background;
-        border-radius: 8px;
-
-        VerticalLayout {
-            padding: 12px;
-            spacing: 8px;
-
-            HorizontalLayout {
-                height: 24px;
-                Text {
-                    text: note-title;
-                    color: dark-mode ? #e6e6e6 : #2e2e2e;
-                    font-size: 13px;
-                    vertical-alignment: center;
-                    horizontal-alignment: left;
-                }
-                Rectangle { horizontal-stretch: 1; }
-                Button {
-                    text: pinned ? "*" : "pin";
-                    clicked => { pin-requested(); }
-                    accessible-label: "Toggle always on top";
-                }
-                Button {
-                    text: "color";
-                    clicked => { root.palette-visible = !root.palette-visible; }
-                    accessible-label: "Change note color";
-                }
-                Button {
-                    text: "x";
-                    clicked => { close-requested(); }
-                    accessible-label: "Close note";
-                }
-            }
-
-            Rectangle {
-                visible: root.palette-visible;
-                height: root.palette-visible ? 34px : 0px;
-                HorizontalLayout {
-                    spacing: 8px;
-                    Button { text: "yellow"; clicked => { color-requested("yellow"); root.palette-visible = false; } }
-                    Button { text: "white"; clicked => { color-requested("white"); root.palette-visible = false; } }
-                    Button { text: "blue"; clicked => { color-requested("blue"); root.palette-visible = false; } }
-                }
-            }
-
-            TextEdit {
-                text: initial-body;
-                placeholder-text: "写下此刻的想法...\n输入 - [ ] 可创建待办项";
-                wrap: word-wrap;
-                font-size: 14px;
-                edited => { body-edited(self.text); }
-            }
-
-            HorizontalLayout {
-                height: 28px;
-                Button {
-                    text: "+ todo";
-                    clicked => { insert-todo-requested(); }
-                    accessible-label: "Insert todo item";
-                }
-                Rectangle { horizontal-stretch: 1; }
-                Text {
-                    text: pinned ? "always on top" : "";
-                    color: dark-mode ? #999999 : #888888;
-                    font-size: 11px;
-                    vertical-alignment: center;
-                }
-            }
-        }
-
-    }
-}
+export { Theme, NoteWindow, BlockItem }

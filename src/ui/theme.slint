@@ -1,0 +1,57 @@
+// Copyright © Deepin Sticky Notes contributors.
+// SPDX-License-Identifier: MIT
+
+// Central place for the color palette. All colors follow the Deepin light/dark
+// scheme defined in `docs/02-UI设计规范.md`. There is no manual color switch:
+// the note background follows the system theme exclusively.
+
+export global Theme {
+    in property <bool> dark-mode: false;
+
+    public pure function note-background() -> color {
+        dark-mode ? #353535 : #FFF9D0
+    }
+
+    public pure function text-color() -> color {
+        dark-mode ? #E6E6E6 : #2E2E2E
+    }
+
+    public pure function text-secondary() -> color {
+        dark-mode ? #999999 : #888888
+    }
+
+    // Completed todo text: strike-through gray.
+    public pure function text-done() -> color {
+        dark-mode ? #999999 : #999999
+    }
+
+    public pure function checkbox-color() -> color {
+        dark-mode ? #4A9EFF : #007AFF
+    }
+
+    public pure function checkbox-border() -> color {
+        dark-mode ? #999999 : #888888
+    }
+
+    public pure function control-normal() -> color {
+        dark-mode ? #ffffff59 : #00000059
+    }
+
+    public pure function control-hover() -> color {
+        dark-mode ? #ffffff99 : #00000099
+    }
+
+    public pure function divider() -> color {
+        dark-mode ? #ffffff14 : #00000014
+    }
+
+    // Background tint for selected blocks.
+    public pure function selection-background() -> color {
+        dark-mode ? #4a9eff1f : #007aff14
+    }
+
+    // Window drop shadow (darkened further when pinned via `pinned` bindings).
+    public pure function shadow-color() -> color {
+        dark-mode ? #00000040 : #00000026
+    }
+}

@@ -2,6 +2,8 @@
 name = "deepin-sticky-notes"
 version = "0.1.0"
 edition = "2021"
+description = "Deepin 极简便签 — a lightweight, low-distraction sticky notes app"
+license = "MIT"
 
 [dependencies]
 anyhow = "1"
@@ -14,3 +16,21 @@ global-hotkey = "0.8"
 
 [build-dependencies]
 slint-build = "1.13"
+
+# `cargo deb` packaging (Phase 5). Run `cargo deb` to produce a .deb that
+# installs the binary, launcher, login-autostart entry and icon.
+[package.metadata.deb]
+maintainer = "Deepin Sticky Notes maintainers"
+copyright = "2026 Deepin Sticky Notes contributors"
+section = "utility"
+priority = "optional"
+extended-description = """\
+Deepin 极简便签：轻量、低打扰的桌面便签应用。支持多便签窗口、\
+文本与待办混合编辑、置顶、系统托盘与全局热键，配色完全跟随系统主题。\
+"""
+assets = [
+    ["target/release/deepin-sticky-notes", "usr/bin/", "755"],
+    ["resources/com.deepin.stickynotes.desktop", "usr/share/applications/", "644"],
+    ["resources/com.deepin.stickynotes.autostart.desktop", "etc/xdg/autostart/", "644"],
+    ["resources/icons/512x512.png", "usr/share/icons/hicolor/512x512/apps/deepin-sticky-notes.png", "644"],
+]
