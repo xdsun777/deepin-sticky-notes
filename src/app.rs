@@ -116,6 +116,7 @@ impl App {
                 is_todo: b.block_type == BlockType::Todo,
                 content: b.content.clone().into(),
                 checked: b.checked.unwrap_or(false),
+                starred: b.starred,
                 rendered: render_markdown(&b.content),
             });
         }
@@ -252,6 +253,7 @@ impl App {
                         },
                         content: item.content.to_string(),
                         checked: if item.is_todo { Some(item.checked) } else { None },
+                        starred: item.starred,
                     })
                     .collect();
                 Note {
@@ -359,7 +361,6 @@ fn wire_callbacks(
         let weak = window.as_weak();
         window.on_block_accepted(move |index| {
             blocks.insert((index + 1) as usize, empty_text_block());
-            clear_selection(&weak);
             focus_block(&weak, index + 1);
             app.borrow_mut().schedule_save();
         });
@@ -380,36 +381,20 @@ fn wire_callbacks(
     }
 
     // Backspace on an empty text line, or "delete" from the context menu:
-    // remove the whole selection when multiple blocks are selected, otherwise
-    // the single block.
+    // remove the single block.
     {
         let app = app.clone();
         let blocks = blocks.clone();
         let weak = window.as_weak();
         window.on_block_delete(move |index| {
-            let (lo, hi) = {
-                let sel = weak
-                    .upgrade()
-                    .map(|w| (w.get_sel_start(), w.get_sel_end()))
-                    .unwrap_or((-1, -1));
-                if sel.0 >= 0 && sel.1 >= 0 && sel.0 != sel.1 {
-                    (sel.0.min(sel.1), sel.1.max(sel.0))
-                } else {
-                    (index, index)
-                }
-            };
-            let count = (hi - lo + 1) as usize;
             let len = blocks.row_count();
-            if count >= len {
-                blocks.set_vec(vec![empty_text_block()]);
+            if len <= 1 {
+                blocks.set_row_data(0, empty_text_block());
                 focus_block(&weak, 0);
             } else {
-                for _ in 0..count {
-                    blocks.remove(lo as usize);
-                }
-                focus_block(&weak, lo.clamp(0, (len - count) as i32 - 1));
+                blocks.remove(index as usize);
+                focus_block(&weak, index.clamp(0, len as i32 - 2));
             }
-            clear_selection(&weak);
             app.borrow_mut().schedule_save();
         });
     }
@@ -445,21 +430,41 @@ fn wire_callbacks(
             }
             let item = blocks.remove(index as usize);
             blocks.insert(target as usize, item);
-            clear_selection(&weak);
             focus_block(&weak, target);
             app.borrow_mut().schedule_save();
         });
     }
 
-    // Context menu: insert a todo after the current line.
+    // Context menu: convert the current line into a todo (checkbox in front),
+    // keeping its content and placing the cursor at the end of the text.
     {
         let app = app.clone();
         let blocks = blocks.clone();
         let weak = window.as_weak();
         window.on_insert_todo(move |index| {
-            blocks.insert((index + 1) as usize, empty_todo_block());
-            clear_selection(&weak);
-            focus_block(&weak, index + 1);
+            let idx = index as usize;
+            if let Some(mut item) = blocks.row_data(idx) {
+                if !item.is_todo {
+                    item.is_todo = true;
+                    item.checked = false;
+                    blocks.set_row_data(idx, item);
+                    focus_block_at_end(&weak, index);
+                }
+            }
+            app.borrow_mut().schedule_save();
+        });
+    }
+
+    // Toggle the "important" mark (blue dot) on a block.
+    {
+        let app = app.clone();
+        let blocks = blocks.clone();
+        window.on_toggle_star(move |index| {
+            let idx = index as usize;
+            if let Some(mut item) = blocks.row_data(idx) {
+                item.starred = !item.starred;
+                blocks.set_row_data(idx, item);
+            }
             app.borrow_mut().schedule_save();
         });
     }
@@ -532,31 +537,25 @@ fn empty_text_block() -> BlockItem {
         is_todo: false,
         content: "".into(),
         checked: false,
-        rendered: slint::StyledText::from_plain_text(""),
-    }
-}
-
-fn empty_todo_block() -> BlockItem {
-    BlockItem {
-        id: format!("block-{}", timestamp_millis()).into(),
-        is_todo: true,
-        content: "".into(),
-        checked: false,
+        starred: false,
         rendered: slint::StyledText::from_plain_text(""),
     }
 }
 
 fn focus_block(weak: &Weak<NoteWindow>, index: i32) {
     if let Some(w) = weak.upgrade() {
+        w.set_focus_to_end(false);
         w.set_focus_index(index);
         w.set_focus_seq(w.get_focus_seq() + 1);
     }
 }
 
-fn clear_selection(weak: &Weak<NoteWindow>) {
+/// Focuses a block and moves the text cursor to the end of its content.
+fn focus_block_at_end(weak: &Weak<NoteWindow>, index: i32) {
     if let Some(w) = weak.upgrade() {
-        w.set_sel_start(-1);
-        w.set_sel_end(-1);
+        w.set_focus_to_end(true);
+        w.set_focus_index(index);
+        w.set_focus_seq(w.get_focus_seq() + 1);
     }
 }
 

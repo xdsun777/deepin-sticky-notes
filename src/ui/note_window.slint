@@ -11,6 +11,7 @@ export struct BlockItem {
     is-todo: bool,
     content: string,
     checked: bool,
+    starred: bool,
     rendered: styled-text,
 }
 
@@ -59,9 +60,10 @@ component BlockRow {
     in-out property <string> content;
     in property <styled-text> rendered;
     in property <bool> checked;
-    in property <bool> selected;
+    in property <bool> starred;
     in property <int> focus-index;
     in property <int> focus-seq;
+    in property <bool> focus-to-end;
 
     callback edited(int, string);
     callback accepted(int);
@@ -70,7 +72,7 @@ component BlockRow {
     callback downgrade-requested(int);
     callback move-requested(int, length);
     callback insert-todo-requested(int);
-    callback select-requested(int, bool);
+    callback toggle-star-requested(int);
 
     min-height: 32px;
 
@@ -79,11 +81,14 @@ component BlockRow {
     changed focus-seq => {
         if focus-index == index {
             ti.focus();
+            if focus-to-end {
+                ti.set-selection-offsets(ti.text.character-count, ti.text.character-count);
+            }
         }
     }
 
     Rectangle {
-        background: selected ? Theme.selection-background() : transparent;
+        background: starred ? Theme.selection-background() : transparent;
         border-radius: 4px;
         animate background { duration: 100ms; easing: ease; }
 
@@ -100,15 +105,11 @@ component BlockRow {
             HorizontalLayout {
                 spacing: 8px;
 
-                // Selection gutter (click to select, Shift+click to extend).
+                // Importance gutter (click to toggle the blue "important" dot).
                 gutter := TouchArea {
                     width: 8px;
                     vertical-stretch: 1;
-                    pointer-event(ev) => {
-                        if ev.kind == PointerEventKind.down && ev.button == PointerEventButton.left {
-                            select-requested(index, ev.modifiers.shift);
-                        }
-                    }
+                    clicked => { toggle-star-requested(index); }
 
                     Rectangle {
                         width: 4px;
@@ -116,7 +117,7 @@ component BlockRow {
                         border-radius: 2px;
                         x: 2px;
                         y: (parent.height - 4px) / 2;
-                        background: selected ? Theme.checkbox-color() : (gutter.has-hover ? Theme.control-normal() : transparent);
+                        background: starred ? Theme.checkbox-color() : (gutter.has-hover ? Theme.control-normal() : transparent);
                     }
                 }
 
@@ -145,8 +146,10 @@ component BlockRow {
 
                 // The text area: renders Markdown when not being edited, and
                 // shows the raw Markdown source while focused. Its height grows
-                // with the (multi-line) text content.
+                // with the (multi-line) text content; it stretches horizontally
+                // so long text wraps instead of pushing the row wider.
                 Rectangle {
+                    horizontal-stretch: 1;
                     height: max(ti.preferred-height, 32px);
 
                     // Rendered Markdown (visible when the line is not focused).
@@ -211,9 +214,8 @@ export component NoteWindow inherits Window {
     in property <bool> pinned;
     in-out property <int> focus-index: -1;
     in-out property <int> focus-seq: 0;
+    in-out property <bool> focus-to-end: false;
     in-out property <float> fade-opacity: 1.0;
-    in-out property <int> sel-start: -1;
-    in-out property <int> sel-end: -1;
 
     callback block-edited(int, string);
     callback block-accepted(int);
@@ -222,6 +224,7 @@ export component NoteWindow inherits Window {
     callback block-downgrade(int);
     callback block-move(int, length);
     callback insert-todo(int);
+    callback toggle-star(int);
     callback pin-requested();
     callback close-requested();
     callback new-note-requested();
@@ -423,7 +426,12 @@ export component NoteWindow inherits Window {
             Flickable {
                 vertical-stretch: 1;
                 interactive: true;
+                // Let mouse drags reach the todo drag handle instead of panning.
+                mouse-drag-pan-enabled: false;
                 content-height: block-list.preferred-height;
+                // Keep the scrollable content exactly as wide as the viewport so
+                // long text wraps instead of widening/offsetting the rows.
+                content-width: block-list.width;
 
                 block-list := VerticalLayout {
                     width: 100%;
@@ -434,9 +442,10 @@ export component NoteWindow inherits Window {
                         content <=> block.content;
                         rendered: block.rendered;
                         checked: block.checked;
-                        selected: root.sel-start >= 0 && i >= min(root.sel-start, root.sel-end) && i <= max(root.sel-start, root.sel-end);
+                        starred: block.starred;
                         focus-index: root.focus-index;
                         focus-seq: root.focus-seq;
+                        focus-to-end: root.focus-to-end;
 
                         edited(i, text) => { root.block-edited(i, text); }
                         accepted(i) => { root.block-accepted(i); }
@@ -445,14 +454,7 @@ export component NoteWindow inherits Window {
                         downgrade-requested(i) => { root.block-downgrade(i); }
                         move-requested(i, delta) => { root.block-move(i, delta); }
                         insert-todo-requested(i) => { root.insert-todo(i); }
-                        select-requested(i, shift) => {
-                            if shift && root.sel-start >= 0 {
-                                root.sel-end = i;
-                            } else {
-                                root.sel-start = i;
-                                root.sel-end = i;
-                            }
-                        }
+                        toggle-star-requested(i) => { root.toggle-star(i); }
                     }
                 }
             }

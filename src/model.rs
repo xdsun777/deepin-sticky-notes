@@ -22,6 +22,9 @@ pub struct Block {
     /// Only meaningful for [`BlockType::Todo`]; `None` for text blocks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checked: Option<bool>,
+    /// Whether the block is marked as important (blue dot in the gutter).
+    #[serde(default)]
+    pub starred: bool,
 }
 
 /// A sticky note and everything needed to restore it on startup.
@@ -50,6 +53,7 @@ impl Note {
                 block_type: BlockType::Text,
                 content: String::new(),
                 checked: None,
+                starred: false,
             }],
         }
     }
@@ -99,6 +103,7 @@ impl Note {
                     block_type,
                     content,
                     checked,
+                    starred: false,
                 }
             })
             .collect();
@@ -108,6 +113,7 @@ impl Note {
                 block_type: BlockType::Text,
                 content: String::new(),
                 checked: None,
+                starred: false,
             });
         }
     }
