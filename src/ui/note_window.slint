@@ -34,8 +34,14 @@ component CheckBox16 {
             border-width: 1px;
             border-color: ta.has-hover || checked ? Theme.checkbox-color() : Theme.checkbox-border();
             background: checked ? Theme.checkbox-color() : transparent;
-            animate background { duration: 100ms; easing: ease; }
-            animate border-color { duration: 100ms; easing: ease; }
+            animate background {
+                duration: 100ms;
+                easing: ease;
+            }
+            animate border-color {
+                duration: 100ms;
+                easing: ease;
+            }
 
             Text {
                 text: "✓";
@@ -44,7 +50,10 @@ component CheckBox16 {
                 horizontal-alignment: center;
                 vertical-alignment: center;
                 opacity: checked ? 1.0 : 0.0;
-                animate opacity { duration: 100ms; easing: ease; }
+                animate opacity {
+                    duration: 100ms;
+                    easing: ease;
+                }
             }
         }
     }
@@ -90,16 +99,39 @@ component BlockRow {
     Rectangle {
         background: starred ? Theme.selection-background() : transparent;
         border-radius: 4px;
-        animate background { duration: 100ms; easing: ease; }
+        animate background {
+            duration: 100ms;
+            easing: ease;
+        }
 
         ContextMenuArea {
             Menu {
-                MenuItem { title: "复制"; activated => { ti.copy(); } }
-                MenuItem { title: "粘贴"; activated => { ti.paste(); } }
-                MenuItem { title: "全选"; activated => { ti.select-all(); } }
-                MenuSeparator {}
-                MenuItem { title: "插入待办项"; activated => { insert-todo-requested(index); } }
-                MenuItem { title: "删除本行"; activated => { delete-requested(index); } }
+                MenuItem {
+                    title: "复制";
+                    activated => { ti.copy(); }
+                }
+
+                MenuItem {
+                    title: "粘贴";
+                    activated => { ti.paste(); }
+                }
+
+                MenuItem {
+                    title: "全选";
+                    activated => { ti.select-all(); }
+                }
+
+                MenuSeparator { }
+
+                MenuItem {
+                    title: "插入待办项";
+                    activated => { insert-todo-requested(index); }
+                }
+
+                MenuItem {
+                    title: "删除本行";
+                    activated => { delete-requested(index); }
+                }
             }
 
             HorizontalLayout {
@@ -122,7 +154,7 @@ component BlockRow {
                 }
 
                 // Drag handle (todos only).
-                if is-todo : grip := TouchArea {
+                if is-todo: grip := TouchArea {
                     width: 12px;
                     vertical-stretch: 1;
                     mouse-cursor: MouseCursor.grab;
@@ -132,13 +164,33 @@ component BlockRow {
                         }
                     }
 
-                    Rectangle { x: 2px; y: (parent.height - 7px) / 2; width: 8px; height: 1px; background: grip.has-hover ? Theme.control-hover() : Theme.control-normal(); }
-                    Rectangle { x: 2px; y: (parent.height - 7px) / 2 + 2px; width: 8px; height: 1px; background: grip.has-hover ? Theme.control-hover() : Theme.control-normal(); }
-                    Rectangle { x: 2px; y: (parent.height - 7px) / 2 + 4px; width: 8px; height: 1px; background: grip.has-hover ? Theme.control-hover() : Theme.control-normal(); }
+                    Rectangle {
+                        x: 2px;
+                        y: (parent.height - 7px) / 2;
+                        width: 8px;
+                        height: 1px;
+                        background: grip.has-hover ? Theme.control-hover() : Theme.control-normal();
+                    }
+
+                    Rectangle {
+                        x: 2px;
+                        y: (parent.height - 7px) / 2 + 2px;
+                        width: 8px;
+                        height: 1px;
+                        background: grip.has-hover ? Theme.control-hover() : Theme.control-normal();
+                    }
+
+                    Rectangle {
+                        x: 2px;
+                        y: (parent.height - 7px) / 2 + 4px;
+                        width: 8px;
+                        height: 1px;
+                        background: grip.has-hover ? Theme.control-hover() : Theme.control-normal();
+                    }
                 }
 
                 // Checkbox (todos only).
-                if is-todo : CheckBox16 {
+                if is-todo: CheckBox16 {
                     checked: checked;
                     vertical-stretch: 1;
                     toggled => { checked-toggled(!checked); }
@@ -175,8 +227,14 @@ component BlockRow {
                         vertical-alignment: center;
                         color: ti.has-focus ? (is-todo && checked ? Theme.text-done() : Theme.text-color()) : transparent;
                         opacity: is-todo && checked ? 0.6 : 1.0;
-                        animate color { duration: 100ms; easing: ease; }
-                        animate opacity { duration: 100ms; easing: ease; }
+                        animate color {
+                            duration: 100ms;
+                            easing: ease;
+                        }
+                        animate opacity {
+                            duration: 100ms;
+                            easing: ease;
+                        }
                         edited => { edited(index, self.text); }
                         accepted => { accepted(index); }
                         key-pressed(event) => {
@@ -193,7 +251,7 @@ component BlockRow {
                     }
 
                     // Strike-through line for completed todos.
-                    if is-todo && checked : Rectangle {
+                    if is-todo && checked: Rectangle {
                         height: 1px;
                         width: 100%;
                         y: (parent.height - 1px) / 2;
@@ -231,25 +289,30 @@ export component NoteWindow inherits Window {
     callback delete-note-requested();
     callback theme-toggle-requested();
 
-    property <length> shadow-margin: 20px;
+    property <length> shadow-margin: 8px;
+    resize-border-width: 8px;
+    preferred-width: 280px + 2 * shadow-margin;
+    preferred-height: 360px + 2 * shadow-margin;
+    min-width: 200px + 2 * shadow-margin;
+    min-height: 200px + 2 * shadow-margin;
 
     no-frame: true;
     background: transparent;
     always-on-top: pinned;
     // Extend the native resize border past the transparent shadow margin so the
     // visible note edge is resizable, not just the invisible window edge.
-    resize-border-width: 24px;
-    preferred-width: 280px + 2 * shadow-margin;
-    preferred-height: 360px + 2 * shadow-margin;
-    min-width: 200px + 2 * shadow-margin;
-    min-height: 200px + 2 * shadow-margin;
+    // resize-border-width: 24px;
+    // preferred-width: 280px + 2 * shadow-margin;
+    // preferred-height: 360px + 2 * shadow-margin;
+    // min-width: 200px + 2 * shadow-margin;
+    // min-height: 200px + 2 * shadow-margin;
     title: note-title;
     default-font-family: "Noto Sans CJK SC, WenQuanYi Micro Hei, Ubuntu, sans-serif";
     default-font-size: 14px;
 
     // Dragging a frameless window: only blank areas reach this layer because
     // the interactive children (inputs, flickable, buttons) sit above it.
-    WindowMoveArea {}
+    WindowMoveArea { }
 
     // In-app fallback for the global hotkey: when the Wayland global-hotkey
     // registration fails, Ctrl+Alt+N still works while a note is focused.
@@ -264,201 +327,230 @@ export component NoteWindow inherits Window {
 
         // The note body, inset by the shadow margin.
         Rectangle {
-        x: shadow-margin;
-        y: shadow-margin;
-        width: parent.width - 2 * shadow-margin;
-        height: parent.height - 2 * shadow-margin;
-        border-radius: 8px;
-        background: Theme.note-background();
-        animate background { duration: 200ms; easing: ease; }
-        opacity: fade-opacity;
-        animate opacity { duration: 150ms; easing: ease; }
+            x: shadow-margin;
+            y: shadow-margin;
+            width: parent.width - 2 * shadow-margin;
+            height: parent.height - 2 * shadow-margin;
+            border-radius: 8px;
+            background: Theme.note-background();
+            animate background {
+                duration: 200ms;
+                easing: ease;
+            }
+            opacity: fade-opacity;
+            animate opacity {
+                duration: 150ms;
+                easing: ease;
+            }
 
-        drop-shadow-blur: pinned ? 24px : 16px;
-        drop-shadow-offset-y: pinned ? 8px : 4px;
-        drop-shadow-color: Theme.shadow-color();
+            drop-shadow-blur: pinned ? 24px : 16px;
+            drop-shadow-offset-y: pinned ? 8px : 4px;
+            drop-shadow-color: Theme.shadow-color();
 
-        VerticalLayout {
-            padding: 16px;
-            spacing: 8px;
+            VerticalLayout {
+                padding: 16px;
+                spacing: 8px;
 
-            // Header: title + the two control buttons (pin / close).
+                // Header: title + the two control buttons (pin / close).
             HorizontalLayout {
-                height: 20px;
-                spacing: 6px;
-
-                Text {
-                    text: note-title;
-                    font-size: 12px;
-                    color: Theme.text-secondary();
-                    vertical-alignment: center;
-                }
-
-                Rectangle { horizontal-stretch: 1; }
-
-                // Theme toggle (sun in light mode, moon in dark mode).
-                theme-area := TouchArea {
-                    width: 20px;
                     height: 20px;
-                    clicked => { theme-toggle-requested(); }
+                    spacing: 6px;
+
+                    Text {
+                        text: note-title;
+                        font-size: 12px;
+                        color: Theme.text-secondary();
+                        vertical-alignment: center;
+                    }
+
                     Rectangle {
-                        width: 12px;
-                        height: 12px;
-                        x: (parent.width - 12px) / 2;
-                        y: (parent.height - 12px) / 2;
-                        border-radius: 6px;
-                        background: theme-area.has-hover ? Theme.control-hover() : Theme.control-normal();
-                        animate background { duration: 200ms; easing: ease; }
-                        Text {
-                            text: Theme.dark-mode ? "☾" : "☀";
-                            font-size: 9px;
-                            color: Theme.dark-mode ? Theme.checkbox-color() : Theme.text-secondary();
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+
+                    // Theme toggle (sun in light mode, moon in dark mode).
+                theme-area := TouchArea {
+                        width: 20px;
+                        height: 20px;
+                        clicked => { theme-toggle-requested(); }
+                        Rectangle {
+                            width: 12px;
+                            height: 12px;
+                            x: (parent.width - 12px) / 2;
+                            y: (parent.height - 12px) / 2;
+                            border-radius: 6px;
+                            background: theme-area.has-hover ? Theme.control-hover() : Theme.control-normal();
+                            animate background {
+                                duration: 200ms;
+                                easing: ease;
+                            }
+                            Text {
+                                text: Theme.dark-mode ? "☾" : "☀";
+                                font-size: 9px;
+                                color: Theme.dark-mode ? Theme.checkbox-color() : Theme.text-secondary();
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
                         }
                     }
-                }
 
-                // Pin (toggle always-on-top).
+                    // Pin (toggle always-on-top).
                 pin-area := TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { pin-requested(); }
-                    Rectangle {
-                        width: 12px;
-                        height: 12px;
-                        x: (parent.width - 12px) / 2;
-                        y: (parent.height - 12px) / 2;
-                        border-radius: 6px;
-                        background: pin-area.has-hover ? Theme.control-hover() : Theme.control-normal();
-                        animate background { duration: 200ms; easing: ease; }
+                        width: 20px;
+                        height: 20px;
+                        clicked => { pin-requested(); }
+                        Rectangle {
+                            width: 12px;
+                            height: 12px;
+                            x: (parent.width - 12px) / 2;
+                            y: (parent.height - 12px) / 2;
+                            border-radius: 6px;
+                            background: pin-area.has-hover ? Theme.control-hover() : Theme.control-normal();
+                            animate background {
+                                duration: 200ms;
+                                easing: ease;
+                            }
                         // Pin glyph: small head + needle.
                         Rectangle {
-                            width: 4px;
-                            height: 4px;
-                            border-radius: 2px;
-                            x: 4px;
-                            y: 2px;
-                            background: pinned ? Theme.checkbox-color() : Theme.text-secondary();
-                            animate background { duration: 200ms; easing: ease; }
-                        }
-                        Rectangle {
-                            width: 2px;
-                            height: 5px;
-                            x: 5px;
-                            y: 5px;
-                            background: pinned ? Theme.checkbox-color() : Theme.text-secondary();
-                            animate background { duration: 200ms; easing: ease; }
+                                width: 4px;
+                                height: 4px;
+                                border-radius: 2px;
+                                x: 4px;
+                                y: 2px;
+                                background: pinned ? Theme.checkbox-color() : Theme.text-secondary();
+                                animate background {
+                                    duration: 200ms;
+                                    easing: ease;
+                                }
+                            }
+
+                            Rectangle {
+                                width: 2px;
+                                height: 5px;
+                                x: 5px;
+                                y: 5px;
+                                background: pinned ? Theme.checkbox-color() : Theme.text-secondary();
+                                animate background {
+                                    duration: 200ms;
+                                    easing: ease;
+                                }
+                            }
                         }
                     }
-                }
 
-                // Delete (permanently remove this note).
+                    // Delete (permanently remove this note).
                 delete-area := TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { delete-note-requested(); }
-                    Rectangle {
-                        width: 12px;
-                        height: 12px;
-                        x: (parent.width - 12px) / 2;
-                        y: (parent.height - 12px) / 2;
-                        border-radius: 6px;
-                        background: delete-area.has-hover ? #ff4d4f59 : Theme.control-normal();
-                        animate background { duration: 200ms; easing: ease; }
+                        width: 20px;
+                        height: 20px;
+                        clicked => { delete-note-requested(); }
+                        Rectangle {
+                            width: 12px;
+                            height: 12px;
+                            x: (parent.width - 12px) / 2;
+                            y: (parent.height - 12px) / 2;
+                            border-radius: 6px;
+                            background: delete-area.has-hover ? #ff4d4f59 : Theme.control-normal();
+                            animate background {
+                                duration: 200ms;
+                                easing: ease;
+                            }
                         // Trash-can glyph drawn from primitives.
                         Rectangle {
-                            width: 7px;
-                            height: 5px;
-                            x: 2.5px;
-                            y: 5px;
-                            border-radius: 1px;
-                            border-width: 1px;
-                            border-color: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
-                        }
-                        Rectangle {
-                            width: 9px;
-                            height: 1px;
-                            x: 1.5px;
-                            y: 3.5px;
-                            background: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
-                        }
-                        Rectangle {
-                            width: 3px;
-                            height: 1px;
-                            x: 4.5px;
-                            y: 2px;
-                            background: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                                width: 7px;
+                                height: 5px;
+                                x: 2.5px;
+                                y: 5px;
+                                border-radius: 1px;
+                                border-width: 1px;
+                                border-color: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                            }
+
+                            Rectangle {
+                                width: 9px;
+                                height: 1px;
+                                x: 1.5px;
+                                y: 3.5px;
+                                background: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                            }
+
+                            Rectangle {
+                                width: 3px;
+                                height: 1px;
+                                x: 4.5px;
+                                y: 2px;
+                                background: delete-area.has-hover ? #ff4d4f : Theme.text-secondary();
+                            }
                         }
                     }
-                }
 
-                // Close (hide the window).
+                    // Close (hide the window).
                 close-area := TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { close-requested(); }
-                    Rectangle {
-                        width: 12px;
-                        height: 12px;
-                        x: (parent.width - 12px) / 2;
-                        y: (parent.height - 12px) / 2;
-                        border-radius: 6px;
-                        background: close-area.has-hover ? Theme.control-hover() : Theme.control-normal();
-                        animate background { duration: 200ms; easing: ease; }
-                        Text {
-                            text: "✕";
-                            font-size: 9px;
-                            color: Theme.text-secondary();
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
+                        width: 20px;
+                        height: 20px;
+                        clicked => { close-requested(); }
+                        Rectangle {
+                            width: 12px;
+                            height: 12px;
+                            x: (parent.width - 12px) / 2;
+                            y: (parent.height - 12px) / 2;
+                            border-radius: 6px;
+                            background: close-area.has-hover ? Theme.control-hover() : Theme.control-normal();
+                            animate background {
+                                duration: 200ms;
+                                easing: ease;
+                            }
+                            Text {
+                                text: "✕";
+                                font-size: 9px;
+                                color: Theme.text-secondary();
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
                         }
                     }
                 }
-            }
 
-            Rectangle {
-                height: 1px;
-                background: Theme.divider();
-            }
+                Rectangle {
+                    height: 1px;
+                    background: Theme.divider();
+                }
 
-            // The editable block list.
+                // The editable block list.
             Flickable {
-                vertical-stretch: 1;
-                interactive: true;
+                    vertical-stretch: 1;
+                    interactive: true;
                 // Let mouse drags reach the todo drag handle instead of panning.
                 mouse-drag-pan-enabled: false;
-                content-height: block-list.preferred-height;
+                    content-height: block-list.preferred-height;
                 // Keep the scrollable content exactly as wide as the viewport so
                 // long text wraps instead of widening/offsetting the rows.
                 content-width: block-list.width;
 
-                block-list := VerticalLayout {
-                    width: 100%;
-                    spacing: 8px;
-                    for block[i] in root.blocks : BlockRow {
-                        index: i;
-                        is-todo: block.is-todo;
-                        content <=> block.content;
-                        rendered: block.rendered;
-                        checked: block.checked;
-                        starred: block.starred;
-                        focus-index: root.focus-index;
-                        focus-seq: root.focus-seq;
-                        focus-to-end: root.focus-to-end;
+                    block-list := VerticalLayout {
+                        width: 100%;
+                        spacing: 8px;
+                        for block[i] in root.blocks: BlockRow {
+                            index: i;
+                            is-todo: block.is-todo;
+                            content <=> block.content;
+                            rendered: block.rendered;
+                            checked: block.checked;
+                            starred: block.starred;
+                            focus-index: root.focus-index;
+                            focus-seq: root.focus-seq;
+                            focus-to-end: root.focus-to-end;
 
-                        edited(i, text) => { root.block-edited(i, text); }
-                        accepted(i) => { root.block-accepted(i); }
-                        checked-toggled(value) => { root.block-checked(i, value); }
-                        delete-requested(i) => { root.block-delete(i); }
-                        downgrade-requested(i) => { root.block-downgrade(i); }
-                        move-requested(i, delta) => { root.block-move(i, delta); }
-                        insert-todo-requested(i) => { root.insert-todo(i); }
-                        toggle-star-requested(i) => { root.toggle-star(i); }
+                            edited(i, text) => { root.block-edited(i, text); }
+                            accepted(i) => { root.block-accepted(i); }
+                            checked-toggled(value) => { root.block-checked(i, value); }
+                            delete-requested(i) => { root.block-delete(i); }
+                            downgrade-requested(i) => { root.block-downgrade(i); }
+                            move-requested(i, delta) => { root.block-move(i, delta); }
+                            insert-todo-requested(i) => { root.insert-todo(i); }
+                            toggle-star-requested(i) => { root.toggle-star(i); }
+                        }
                     }
                 }
             }
-        }
 
             // Resize grip hint in the bottom-right corner.
             Path {
